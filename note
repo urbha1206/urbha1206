@@ -1,0 +1,8 @@
+
+Hi ,
+
+Regarding the ILM process, I'd like to discuss data obfuscation with you. Currently, our system relies on PROTEGRITY in pyspark jobs. As we're transitioning to dbt, we also need to set up configuration in Snowflake to utilize it. However, this will result in additional costs whenever we run jobs using PROTEGRITY.
+
+I want to confirm if we actually need the obfuscated data to be readable. If not necessary, we can replace the obfuscated columns with random text. Could you please confirm this?
+
+Thank you.
