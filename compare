@@ -1,0 +1,50 @@
+Sub CompareConcatenatedValues()
+    Dim wb1 As Workbook
+    Dim wb2 As Workbook
+    Dim ws1 As Worksheet
+    Dim ws2 As Worksheet
+    Dim lastRow1 As Long
+    Dim lastRow2 As Long
+    Dim i As Long
+    Dim concatenatedOutput1 As String
+    Dim concatenatedOutput2 As String
+
+    ' Open the first workbook
+    Set wb1 = Workbooks.Open("Path_to_First_Workbook.xlsx") ' Update the path to your first workbook
+
+    ' Open the second workbook
+    Set wb2 = Workbooks.Open("Path_to_Second_Workbook.xlsx") ' Update the path to your second workbook
+
+    ' Set the first worksheet in the first workbook
+    Set ws1 = wb1.Sheets("Sheet1") ' Update the sheet name as needed
+
+    ' Set the second worksheet in the second workbook
+    Set ws2 = wb2.Sheets("Sheet1") ' Update the sheet name as needed
+
+    ' Find the last row of data in the first worksheet
+    lastRow1 = ws1.Cells(ws1.Rows.Count, "A").End(xlUp).Row
+
+    ' Find the last row of data in the second worksheet
+    lastRow2 = ws2.Cells(ws2.Rows.Count, "A").End(xlUp).Row
+
+    ' Concatenate values from the first worksheet
+    For i = 1 To lastRow1
+        concatenatedOutput1 = concatenatedOutput1 & ws1.Cells(i, 1).Value & ws1.Cells(i, 2).Value
+    Next i
+
+    ' Concatenate values from the second worksheet
+    For i = 1 To lastRow2
+        concatenatedOutput2 = concatenatedOutput2 & ws2.Cells(i, 1).Value & ws2.Cells(i, 2).Value
+    Next i
+
+    ' Compare the concatenated outputs
+    If concatenatedOutput1 = concatenatedOutput2 Then
+        MsgBox "The concatenated outputs are identical."
+    Else
+        MsgBox "The concatenated outputs are different."
+    End If
+
+    ' Close both workbooks without saving changes
+    wb1.Close False
+    wb2.Close False
+End Sub
