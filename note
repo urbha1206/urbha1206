@@ -1,8 +1,24 @@
-
-Hi ,
-
-Regarding the ILM process, I'd like to discuss data obfuscation with you. Currently, our system relies on PROTEGRITY in pyspark jobs. As we're transitioning to dbt, we also need to set up configuration in Snowflake to utilize it. However, this will result in additional costs whenever we run jobs using PROTEGRITY.
-
-I want to confirm if we actually need the obfuscated data to be readable. If not necessary, we can replace the obfuscated columns with random text. Could you please confirm this?
-
-Thank you.
+Type: Job: ApplicationIntegrator:TalonBatch2
+Description: "Runs dbt job to load DL3 table : W_CWL_FC_JOB_SKILL"
+Comment:
+"Runs dbt job to load DL3 table : W_CWL_FC_JOB_SKILL"
+AI-Cyberark Alias: HRAEDDWDBT
+AI-Helm Chart Name: hr-osl-job-skill
+Variables:
+- UCM-vaLues-NO01-eLement: CTM_ODATE=%%$0YEAR-%%0MONTH-%%0DAY
+- UCM-vaLues-NO02-eLement: CTM_JOBNAME=%%JOBNAME
+- owner-asg: ASG_MFP_MW_HR_DE_PROD
+- owner-email: ${MAINTAINER_EMAIL}
+When:
+WeekDays:
+- ALL
+MonthDays:
+- ALL
+ToTime: *>'
+DaysRelation: OR RuleBasedCaLendars:
+Included:
+- USE PARENT DDWDBTOR:
+Type: Resource: Semaphore
+Quantity: "1"
+Priority: Medium
+DaysKeepActive: "5"
