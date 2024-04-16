@@ -1,24 +1,3 @@
-Type: Job: ApplicationIntegrator:TalonBatch2
-Description: "Runs dbt job to load DL3 table : W_CWL_FC_JOB_SKILL"
-Comment:
-"Runs dbt job to load DL3 table : W_CWL_FC_JOB_SKILL"
-AI-Cyberark Alias: HRAEDDWDBT
-AI-Helm Chart Name: hr-osl-job-skill
-Variables:
-- UCM-vaLues-NO01-eLement: CTM_ODATE=%%$0YEAR-%%0MONTH-%%0DAY
-- UCM-vaLues-NO02-eLement: CTM_JOBNAME=%%JOBNAME
-- owner-asg: ASG_MFP_MW_HR_DE_PROD
-- owner-email: ${MAINTAINER_EMAIL}
-When:
-WeekDays:
-- ALL
-MonthDays:
-- ALL
-ToTime: *>'
-DaysRelation: OR RuleBasedCaLendars:
-Included:
-- USE PARENT DDWDBTOR:
-Type: Resource: Semaphore
-Quantity: "1"
-Priority: Medium
-DaysKeepActive: "5"
+We have two folders, osl_prod and osl_sat_prod. osl_prod is scheduled to run from Saturday through Thursday at 08:23. All the folders will be running the next day morning, but for the osl_sat_prod folder, at Friday 18:00 it is running on the same day, so we want to reschedule it to run the next day, i.e., on Saturday at 18:00. Could you please help us with how to schedule this folder?
+
+Can we hold only one job from a folder once it is loaded, so that the rest of the other jobs in a folder can be executed? If so, how can we do it?
