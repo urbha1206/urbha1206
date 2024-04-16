@@ -1,3 +1,15 @@
 We have two folders, osl_prod and osl_sat_prod. osl_prod is scheduled to run from Saturday through Thursday at 08:23. All the folders will be running the next day morning, but for the osl_sat_prod folder, at Friday 18:00 it is running on the same day, so we want to reschedule it to run the next day, i.e., on Saturday at 18:00. Could you please help us with how to schedule this folder?
 
 Can we hold only one job from a folder once it is loaded, so that the rest of the other jobs in a folder can be executed? If so, how can we do it?
+
+
+-- Query to list table names in a specific database
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'YOUR_SCHEMA_NAME';
+
+-- Query to get the number of columns in a specific table
+SELECT count(column_name) AS num_columns
+FROM information_schema.columns
+WHERE table_schema = 'YOUR_SCHEMA_NAME'
+AND table_name = 'YOUR_TABLE_NAME';
