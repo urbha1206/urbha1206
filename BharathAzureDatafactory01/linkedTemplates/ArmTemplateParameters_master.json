@@ -1,0 +1,36 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "BharathAzureDatafactory01"
+		},
+		"LS_BlobTestConnection_connectionString": {
+			"value": ""
+		},
+		"LS_BlobZipFile_connectionString": {
+			"value": ""
+		},
+		"LS_adls_TestConnection_accountKey": {
+			"value": ""
+		},
+		"LS_adls_connection_accountKey": {
+			"value": ""
+		},
+		"HttpServer1_properties_typeProperties_url": {
+			"value": "@{linkedService().BaseURL}"
+		},
+		"LS_adls_TestConnection_properties_typeProperties_url": {
+			"value": "https://pbkdeadls001.dfs.core.windows.net/"
+		},
+		"LS_adls_connection_properties_typeProperties_url": {
+			"value": "https://pbkdeadls001.dfs.core.windows.net/"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}
