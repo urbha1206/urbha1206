@@ -7,6 +7,10 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "BharathAzureDatafactory01"
 		},
+		"LS_AzureSQLDataBaseConnection_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AzureSQLDataBaseConnection'"
+		},
 		"LS_BlobTestConnection_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_BlobTestConnection'"
@@ -26,6 +30,18 @@
 		"HttpServer1_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "@{linkedService().BaseURL}"
+		},
+		"LS_AzureSQLDataBaseConnection_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "de-azuresqlserver.database.windows.net"
+		},
+		"LS_AzureSQLDataBaseConnection_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "learnDE"
+		},
+		"LS_AzureSQLDataBaseConnection_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "bharath"
 		},
 		"LS_adls_TestConnection_properties_typeProperties_url": {
 			"type": "string",
@@ -62,6 +78,9 @@
 					"factoryName": {
 						"value": "[parameters('factoryName')]"
 					},
+					"LS_AzureSQLDataBaseConnection_password": {
+						"value": "[parameters('LS_AzureSQLDataBaseConnection_password')]"
+					},
 					"LS_BlobTestConnection_connectionString": {
 						"value": "[parameters('LS_BlobTestConnection_connectionString')]"
 					},
@@ -76,6 +95,15 @@
 					},
 					"HttpServer1_properties_typeProperties_url": {
 						"value": "[parameters('HttpServer1_properties_typeProperties_url')]"
+					},
+					"LS_AzureSQLDataBaseConnection_properties_typeProperties_server": {
+						"value": "[parameters('LS_AzureSQLDataBaseConnection_properties_typeProperties_server')]"
+					},
+					"LS_AzureSQLDataBaseConnection_properties_typeProperties_database": {
+						"value": "[parameters('LS_AzureSQLDataBaseConnection_properties_typeProperties_database')]"
+					},
+					"LS_AzureSQLDataBaseConnection_properties_typeProperties_userName": {
+						"value": "[parameters('LS_AzureSQLDataBaseConnection_properties_typeProperties_userName')]"
 					},
 					"LS_adls_TestConnection_properties_typeProperties_url": {
 						"value": "[parameters('LS_adls_TestConnection_properties_typeProperties_url')]"

@@ -5,6 +5,9 @@
 		"factoryName": {
 			"value": "BharathAzureDatafactory01"
 		},
+		"LS_AzureSQLDataBaseConnection_password": {
+			"value": ""
+		},
 		"LS_BlobTestConnection_connectionString": {
 			"value": ""
 		},
@@ -19,6 +22,15 @@
 		},
 		"HttpServer1_properties_typeProperties_url": {
 			"value": "@{linkedService().BaseURL}"
+		},
+		"LS_AzureSQLDataBaseConnection_properties_typeProperties_server": {
+			"value": "de-azuresqlserver.database.windows.net"
+		},
+		"LS_AzureSQLDataBaseConnection_properties_typeProperties_database": {
+			"value": "learnDE"
+		},
+		"LS_AzureSQLDataBaseConnection_properties_typeProperties_userName": {
+			"value": "bharath"
 		},
 		"LS_adls_TestConnection_properties_typeProperties_url": {
 			"value": "https://pbkdeadls001.dfs.core.windows.net/"
