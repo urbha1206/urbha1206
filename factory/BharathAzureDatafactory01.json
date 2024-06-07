@@ -1,0 +1,9 @@
+{
+	"name": "BharathAzureDatafactory01",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "9c48877b-1e2e-4fb2-bdfb-ce233b76ec62",
+		"tenantId": "91c56c15-b48d-4c50-9432-b502e935f289"
+	}
+}
