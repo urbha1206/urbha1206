@@ -1,0 +1,24 @@
+{
+	"name": "AzureSqlTable1",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AzureSQLDataBaseConnection",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"name": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "dob",
+			"table": {
+				"value": "@dataset().name",
+				"type": "Expression"
+			}
+		}
+	}
+}

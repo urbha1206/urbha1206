@@ -1,0 +1,31 @@
+{
+	"name": "DS_AllcsvFiles",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_BlobTestConnection",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"name": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@dataset().name",
+					"type": "Expression"
+				},
+				"container": "raw-data"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}
