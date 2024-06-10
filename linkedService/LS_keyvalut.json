@@ -1,0 +1,10 @@
+{
+	"name": "LS_keyvalut",
+	"properties": {
+		"annotations": [],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "https://keyvalutlearnde.vault.azure.net/"
+		}
+	}
+}
