@@ -1,0 +1,104 @@
+Here's your analysis of the code with some modifications and additional details for clarity:
+
+### Analysis of `pre_post_processing.py`
+
+**Step 1 - Initialization:**
+- The first step is to initialize the input path, output folder path, and other required variables. The `__init__` method of the `PrePostDataProcessor` class takes several arguments, including:
+  - `input_folder_pre`: Directory path for input files.
+  - `output_folder_pre`: Directory path where the concatenated result will be saved.
+  - `output_filename_pre`: Name of the file to store concatenated results.
+  - `output_zip_folder_post`: Directory path where processed files will be compressed and stored.
+  - `ctm_order_date`: The Control-M order date, used for timestamping.
+  - `synch_file_path_for_pre_post`: Path for the synchronization log file.
+  - `source_file_pre_fix`: Prefix for source files that are to be processed.
+  - `source_file_extension`: Extension of the source files.
+  - `processed_file_abs_path`: Absolute path to the processed files directory.
+  - `copy_move_or_delete`: Flag indicating whether to copy, move, or delete files after processing.
+
+**Step 2 - Change File Permissions:**
+- The `file_permission_change()` method changes the file permissions and ownership to ensure proper access rights. 
+- **Arguments**: 
+  - `file_name_with_abs_path`: The absolute path of the file whose permissions are to be modified.
+
+**Step 3 - Create Temporary Synchronization File:**
+- The `create_temp_synchronization_file()` method generates a temporary log file containing details about processed files. The log file includes the order date, job name, and timestamp.
+- **Arguments**: 
+  - `order_date`: Date associated with the current order.
+  - `list_of_files`: List of files to be logged.
+  - `ast_name`: Asset name for the log file.
+  - `output_folder`: Folder where the log file will be saved.
+
+**Step 4 - Remove Special Characters:**
+- The `clean_special_characters()` method cleans special characters from specified columns in a DataFrame.
+- **Arguments**: 
+  - `df`: The DataFrame to be cleaned.
+  - `column_name`: The name of the column from which special characters should be removed.
+
+**Step 5 - Create Folder If Not Exists:**
+- The `create_folder_if_not_exist()` method checks if a specified directory exists; if not, it creates the directory with appropriate permissions.
+- **Arguments**: 
+  - `folder_path`: The path of the folder to check or create.
+
+**Step 6 - Delete Files Older Than N Days:**
+- The `delete_files_older_than_n_days()` method deletes files in a specified folder that are older than a given number of days (default is 5 days).
+- **Arguments**: 
+  - `folder_path`: Path of the folder from which old files will be deleted.
+  - `days`: Number of days to use as the threshold for deleting files.
+
+**Step 7 - Rename Processed Files and Delete Old Files from NAS:**
+- The `processed_file_rename_and_delete_old_files_from_nas()` method renames processed files and deletes old files from a NAS (Network Attached Storage) directory.
+- **Arguments**: 
+  - `concatenate_file_nas_path`: Path to the NAS directory containing concatenated files.
+  - `asst_name`: Asset name for the processed files.
+  - `temp_file_nas_path`: Path to the temporary NAS directory.
+
+**Step 8 - Move, Copy, or Delete Files:**
+- The `move_copy_or_delete_file_from_source()` method checks if a source file exists and performs actions based on the `copy_move_or_delete` flag:
+  - Copies files if the flag is set to 'C'.
+  - Moves files if the flag is set to 'M'.
+  - Deletes files if the flag is set to 'D'.
+- **Arguments**: 
+  - `source_path`: Path of the source file.
+  - `destination_folder`: Destination folder path for copied or moved files.
+  - `file_action_flag`: Flag indicating the action to be taken (Copy, Move, or Delete).
+
+**Step 9 - Concatenate Files:**
+- The `concatenate_files()` method concatenates multiple files into a single file based on specified prefix and extension.
+- **Arguments**: 
+  - `source_file_abs_path`: Absolute path of the source files.
+  - `output_folder_abs_path`: Absolute path where the concatenated file will be saved.
+  - `output_file_name`: Name of the concatenated output file.
+  - `ctm_order_date`: Control-M order date used for timestamping.
+  - `source_file_prefix`: Prefix to filter source files for concatenation.
+  - `source_file_extension`: Extension to filter source files for concatenation.
+
+**Steps within Concatenation:**
+- **Check if the folder exists**: Verify that the source folder is available.
+- **Check for empty strings for the prefix and extension**: Validate that the prefix and extension are provided.
+- **Get a list of files**: Filter files based on the prefix and extension.
+- **Check for the presence of files**: Ensure files are available for concatenation.
+- **Create required folders**: Use the method from Step 5 to create output and temporary folders.
+- **Create a temp synchronization file**: Use the method from Step 3 for logging.
+- **Read the log file**: Extract the list of files to be processed.
+- **Empty the DataFrame**: Prepare an empty DataFrame for concatenation.
+- **Loop through files and append data**: Load each file and append its data to the DataFrame.
+- **Add file name as a column**: Include the file name in the concatenated DataFrame for traceability.
+- **Compare row counts**: Verify that the merged DataFrame's row count matches the total rows in individual files.
+- **Save the concatenated DataFrame to a CSV file**: Output the final DataFrame.
+- **Change permissions and ownership**: Update file permissions for the output file.
+
+**Step 10 - Merge Files Function:**
+- This is essentially another call to the `concatenate_files()` method to perform a file merge operation.
+
+**Step 11 - Rename and Delete Older Files from NAS During Post Processing:**
+- The `rename_delete_processed_files()` method is called after post-processing to manage NAS files.
+
+**Static Methods:**
+- **`get_environment_variable()`**: Retrieves environment variables needed for processing.
+- **Utility Functions**:
+  - `rename()`: Renames files.
+  - `unpack_archive()`: Unpacks zip archives.
+  - `move()`: Moves files from source to destination.
+  - `remove_special_character_from_handler()`: Removes special characters from filenames.
+
+These steps detail the sequence of operations in the script, highlighting the modular design and robust error handling that supports flexible data processing in various environments.
