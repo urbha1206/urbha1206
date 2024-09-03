@@ -1,0 +1,144 @@
+import sys
+import traceback
+import oracledb
+from grp_python_innersource_conjur import USAAConjur
+from ldap3 import Server, Connection, SUBTREE
+import os
+import csv
+import jaydebeapi
+from datetime import datetime
+from sf_utils import *
+
+# Constants
+CHUNK_SIZE = 10000  # Number of rows to fetch at a time
+
+startTS = datetime.now()
+print('Inside the DB python: Start Time : {}'.format(startTS))
+
+ROOT_DIR = os.path.abspath(os.curdir)
+print('Root Dir : {}'.format(ROOT_DIR))
+
+def executeSelect(sql_curs, sql_stmt):
+    try:
+        sql_curs.execute(sql_stmt)
+        headers = [i[0] for i in sql_curs.description]
+        return headers
+    except Exception:
+        print("Error in execute")
+        print("Exception in user code:")
+        print("-" * 60)
+        traceback.print_exc(file=sys.stdout)
+        print("-" * 60)
+        raise Exception("Error in executing the SQL.")
+
+def mfp_rules(string, TgtQtChr, TgtDelim, EscChar):
+    if TgtQtChr in string:
+        return TgtQtChr + string.replace(TgtQtChr, EscChar + TgtQtChr) + TgtQtChr
+    if TgtDelim in string:
+        return TgtQtChr + string + TgtQtChr
+    return string
+
+def extract_data(sql_stmt, SrcDBType, SrcDatabase, SrcDBConjurVault, TgtFile, TgtQtChr='"', TgtDelim=','):
+    sql_stmt = sql_stmt.rstrip(' ').rstrip(';')
+    
+    DBENV = os.environ.get('DBENV')
+    DB_SERVER = os.environ.get('SRC_DB_SERVER')
+    DB_JDBC_URL = os.environ.get('JDBC_CONNECTION_STRING')
+    DB_DRIVER = os.environ.get('JDBC_TDS')
+    ESCAPE_CHARACTER = os.environ.get('ESCAPE_CHARACTER')
+    EscChar = ESCAPE_CHARACTER
+
+    print(f'SrcDBConjurVault..: [{SrcDBConjurVault}]')
+    print(f'SrcDBType......: [{SrcDBType}]')
+    print(f'SrcDatabase....: [{SrcDatabase}]')
+    print(f'TgtFile........: [{TgtFile}]')
+    print(f'TgtQtChr.......: [{TgtQtChr}]')
+    print(f'TgtDelim.......: [{TgtDelim}]')
+    print(f'EscChar........: [{EscChar}]')
+    print(f'DBENV..........: [{DBENV}]')
+    print(f'sql_stmt.......: [{sql_stmt}]')
+
+    if DBENV is None:
+        raise Exception('DBENV environment variable should be defined')
+
+    if SrcDBType == 'ORACLE':
+        db_user, db_pwd = getConjurCreds(SrcDBConjurVault)
+        sql_conn = createDBConnection(db_user, db_pwd, DBENV + SrcDatabase, DB_SERVER)
+    
+    elif SrcDBType == 'SQLSERVER':
+        db_user, db_pwd = getConjurCreds(SrcDBConjurVault)
+        jdbc_driver_loc = '/deployments/JDBC_libs/jtds-1.3.1.jar'
+        sql_conn = jaydebeapi.connect(DB_DRIVER, DB_JDBC_URL, {'user': db_user, 'password': db_pwd}, jars=jdbc_driver_loc)
+    
+    else:
+        raise Exception('Invalid SrcDBType: ' + SrcDBType)
+
+    sql_curs = None
+    csv_file = None
+
+    try:
+        sql_curs = sql_conn.cursor()
+        headers = executeSelect(sql_curs, sql_stmt)
+        print('SQL Executed')
+
+        rows_processed = 0
+
+        csv_file = open(TgtFile, "w", newline='', buffering=1)
+        writer = csv.writer(csv_file,
+                            delimiter=TgtDelim,
+                            quoting=csv.QUOTE_MINIMAL,
+                            quotechar=TgtQtChr,
+                            doublequote=False,
+                            escapechar='\\')
+        writer.writerow(headers)
+
+        while True:
+            sql_result = sql_curs.fetchmany(CHUNK_SIZE)
+            if not sql_result:
+                break  # No more rows to fetch
+
+            for t_row in sql_result:
+                try:
+                    row = [(mfp_rules(s, TgtQtChr, TgtDelim, EscChar) if isinstance(s, str) else s) for s in t_row]
+                    writer.writerow(row)
+                except Exception:
+                    print("Error in extracting the row and writing to the file.")
+                    print("-" * 60)
+                    traceback.print_exc(file=sys.stdout)
+                    print("-" * 60)
+                    raise Exception("Error in extracting the row and writing to the file.")
+
+            rows_processed += len(sql_result)
+            print(f"Processed {rows_processed} rows")
+
+    except Exception as e:
+        print("Error during data extraction or writing.")
+        print("-" * 60)
+        traceback.print_exc(file=sys.stdout)
+        print("-" * 60)
+        raise e  # Re-raise the exception after cleanup
+
+    finally:
+        if sql_curs:
+            sql_curs.close()
+        if sql_conn:
+            sql_conn.close()
+        if csv_file:
+            csv_file.close()
+
+    endTS = datetime.now()
+    print("Extracted rows are written to the file: " + TgtFile)
+    print('Inside the DB python: Start Time : {}'.format(startTS))
+    print('Inside the DB python: End Time : {}'.format(endTS))
+
+
+if __name__ == "__main__":
+    sql_stmt = sys.argv[1].rstrip(' ').rstrip(';')
+    SrcDBType = sys.argv[2]
+    SrcDatabase = sys.argv[3]
+    SrcDBConjurVault = sys.argv[4]
+    TgtFile = sys.argv[5]
+    TgtQtChr = sys.argv[6]
+    TgtDelim = sys.argv[7]
+
+    extract_data(sql_stmt, SrcDBType, SrcDatabase, SrcDBConjurVault, TgtFile, TgtQtChr, TgtDelim)
