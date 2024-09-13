@@ -1,0 +1,112 @@
+Changes to the Existing Process and Performance Improvements
+Introduction:
+This document details the changes made to the existing process of extracting data from a database and writing it to a CSV file. The original process was memory-intensive, causing significant memory consumption and resulting in failure when dealing with large datasets. This document explains the changes made to optimize memory usage and improve performance, as well as the results of the new approach.
+
+1. Original Process Overview:
+Process Description:
+
+The original process involved executing an SQL query to extract data from Oracle or SQL Server and then writing the extracted data to a CSV file. However, the data was fetched in one go (using fetchall()), which loaded the entire result set into memory before writing it to the file. This caused significant memory consumption, especially for large datasets.
+
+Original Flow:
+
+Execute SQL Query: The SQL query is executed, and the result is fetched entirely using fetchall().
+Store All Rows in Memory: The entire result set, which could be millions of rows, is stored in memory.
+Write to File: The rows are then written to the target CSV file after they have been processed in memory.
+Problem with the Original Process:
+
+Memory Overload: The fetchall() method loads all rows into memory, which can lead to memory exhaustion, especially for large datasets. In one instance, a 6 GB CSV file process consumed 30 GB of memory, causing the process to be killed.
+Process Failure: Due to excessive memory consumption, the process failed to complete for large datasets.
+Inefficient Use of Resources: Memory is used inefficiently as the entire dataset is stored in memory, which is unnecessary for writing to a file incrementally.
+2. Updated Process Overview:
+Objective:
+
+The goal of the updated process is to minimize memory consumption by fetching and processing the data in chunks, rather than loading the entire result set into memory.
+
+Key Changes Made:
+
+Chunk-Based Fetching: The fetchall() method was replaced with fetchmany(CHUNK_SIZE). This ensures that only a small subset of rows is loaded into memory at any given time. The CHUNK_SIZE was initially set to 10,000 rows.
+
+Incremental Writing to File: As each chunk is fetched from the database, it is immediately written to the target file. This avoids the need to keep all rows in memory.
+
+Efficient Resource Management: The new process ensures that resources (such as file handlers, database cursors, and connections) are properly closed after use, preventing memory leaks.
+
+New Flow:
+
+Execute SQL Query: The SQL query is executed, and rows are fetched incrementally using fetchmany(CHUNK_SIZE).
+Fetch Data in Chunks: A fixed number of rows (e.g., 10,000) is fetched and processed at a time.
+Write Each Chunk to File: Each chunk is written to the CSV file as soon as it is fetched, reducing memory usage.
+Repeat Until Completion: The process repeats until all rows are fetched and written to the file.
+3. Performance Improvements:
+Before Optimization (Original Process)
+
+File Size: 6 GB CSV file
+Memory Usage: 30 GB of memory consumption due to fetchall() storing all rows in memory.
+Result: The process failed due to memory exhaustion (POD was automatically killed as it exceeded 30 GB memory limit).
+After Optimization (Updated Process)
+
+File Size: 6 GB CSV file
+Memory Usage: 6 GB of memory consumption due to chunk-based processing and incremental writing.
+Result: The process completed successfully within the 6 GB memory limit.
+Detailed Explanation of Memory Usage Reduction:
+
+Original Process (High Memory Consumption):
+
+The entire result set is loaded into memory at once. For a 6 GB file, this requires storing the entire data (potentially up to 30 GB, due to overhead and memory fragmentation).
+Memory is required not only for the rows themselves but also for metadata and buffer operations.
+This results in memory consumption that is several times the file size, leading to failure when the memory limit is reached.
+Updated Process (Optimized Memory Usage):
+
+By using fetchmany(CHUNK_SIZE), only 10,000 rows (approx. 100 MB, depending on the row size) are loaded into memory at a time.
+After writing each chunk to the file, memory is freed for the next chunk, keeping memory usage constant and low.
+For the same 6 GB file, the updated process uses only 6 GB of memory, a significant reduction from the original 30 GB.
+Performance Improvement Summary:
+Metric	Original Process	Updated Process
+File Size	6 GB	6 GB
+Memory Consumption	30 GB	6 GB
+Process Completion	Failed (due to memory overload)	Successful
+Rows Processed at Once	All rows in memory	10,000 rows at a time
+Memory Management	Inefficient (entire dataset in memory)	Efficient (chunked processing)
+4. Technical Details of the Changes:
+Original Code Issues:
+fetchall() Problem: The main issue with the original process was the use of fetchall(), which loaded the entire dataset into memory, causing high memory usage and eventually crashing the process.
+Memory Bloat: The memory footprint could grow very large when dealing with millions of rows, as each row and its metadata consumed memory.
+Updated Code:
+python
+Copy code
+CHUNK_SIZE = 10000  # Fetch data in chunks of 10,000 rows
+
+# Execute query and fetch data in chunks
+while True:
+    sql_result = sql_curs.fetchmany(CHUNK_SIZE)
+    if not sql_result:
+        break  # No more rows to fetch
+
+    for t_row in sql_result:
+        # Process and write each chunk to the file incrementally
+        writer.writerow(t_row)
+Key Technical Changes:
+
+fetchmany(CHUNK_SIZE): This method replaces fetchall() to fetch rows in smaller, manageable chunks.
+Incremental Writing: Each chunk is written to the file as soon as it is fetched, reducing the need to hold large datasets in memory.
+Progress Monitoring: Debug statements were added to monitor progress by printing the number of rows processed.
+5. Benefits of the Updated Process:
+Memory Efficiency:
+
+The memory consumption is now proportional to the chunk size rather than the entire dataset size.
+The process is able to handle large datasets (e.g., 1 billion rows or 50 GB file size) with limited memory.
+Scalability:
+
+The updated process can scale to larger datasets without significantly increasing memory consumption.
+The CHUNK_SIZE can be adjusted based on available memory to further optimize performance.
+Improved Stability:
+
+The process no longer crashes due to memory exhaustion, making it more reliable for handling large datasets in production environments.
+The successful completion of a 6 GB file using only 6 GB of memory demonstrates the effectiveness of the chunk-based approach.
+Reduced I/O Overhead:
+
+By processing data in chunks and writing to the file incrementally, the number of I/O operations is reduced, improving overall performance.
+This results in faster data extraction and writing times.
+6. Conclusion:
+The updated process introduces significant performance improvements by switching to chunk-based processing and incremental file writing. These changes ensure that large datasets can be handled efficiently, using a fraction of the memory previously required. As demonstrated, a process that previously failed due to memory overload was successfully completed using just 6 GB of memory, providing a 5x reduction in memory consumption.
+
+This optimized approach not only resolves the memory consumption issue but also provides a scalable and reliable solution for handling large datasets in production environments.
