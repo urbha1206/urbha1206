@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Define the source file
+source_file="abc.csv"
+
+# Define the target file (Ensure this is properly set)
+target_file="abc_duplicated.csv"
+
+# Check if the source file exists
+if [ ! -f "$source_file" ]; then
+  echo "Source file $source_file does not exist."
+  exit 1
+fi
+
+# Check if the target directory exists (if using a directory in the path)
+target_dir=$(dirname "$target_file")
+if [ ! -d "$target_dir" ]; then
+  echo "Target directory $target_dir does not exist. Creating it."
+  mkdir -p "$target_dir"
+fi
+
+# First, copy the original file to create a new target file
+cp "$source_file" "$target_file"
+
+# Append the content of the original file to the target file
+cat "$source_file" >> "$target_file"
+
+# Count rows in the original file
+original_rows=$(wc -l < "$source_file")
+echo "Original file $source_file has $original_rows rows."
+
+# Count rows in the duplicated file (should be double the original)
+duplicated_rows=$(wc -l < "$target_file")
+echo "Duplicated file $target_file now has $duplicated_rows rows."
+
+# Ensure that the row count is as expected (double the original)
+expected_rows=$((original_rows * 2))
+
+if [ "$duplicated_rows" -eq "$expected_rows" ]; then
+  echo "Row count matches expected number: $duplicated_rows rows."
+else
+  echo "Warning: Row count does not match the expected number!"
+fi
+
+echo "File duplication complete."
