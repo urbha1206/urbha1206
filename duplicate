@@ -22,6 +22,69 @@ if [ ! -d "$target_dir" ]; then
   mkdir -p "$target_dir"
 fi
 
+# Count rows in the original file excluding the header (using `tail` to exclude the header)
+original_rows=$(tail -n +2 "$source_file" | wc -l)
+echo "Original file $source_file has $original_rows rows (excluding the header)."
+
+# Calculate how many full copies we need to reach close to the target
+copy_count=$((target_row_count / original_rows))
+remaining_rows=$((target_row_count % original_rows))
+
+# First, copy the header to the target file
+head -n 1 "$source_file" > "$target_file"
+
+# Append the content of the source file (excluding the header) enough times to reach the target row count
+for i in $(seq 1 $copy_count); do
+  tail -n +2 "$source_file" >> "$target_file"
+done
+
+# If there are remaining rows to reach exactly 210 million, append a part of the file excluding the header
+if [ $remaining_rows -gt 0 ]; then
+  tail -n +2 "$source_file" | head -n $remaining_rows >> "$target_file"
+fi
+
+# Count rows in the final duplicated file
+final_row_count=$(wc -l < "$target_file")
+echo "Duplicated file $target_file now has $final_row_count rows (including the header)."
+
+# Ensure that the row count is as expected (target + 1 for the header row)
+expected_rows=$((target_row_count + 1))
+if [ "$final_row_count" -eq "$expected_rows" ]; then
+  echo "Row count matches expected number: $final_row_count rows."
+else
+  echo "Warning: Row count does not match the expected number!"
+fi
+
+echo "File duplication complete."
+
+
+
+------------------------------------------------
+
+#!/bin/bash
+
+# Define the source file
+source_file="abc.csv"
+
+# Define the target file (Ensure this is properly set)
+target_file="abc_duplicated.csv"
+
+# Define the target number of rows
+target_row_count=210000000
+
+# Check if the source file exists
+if [ ! -f "$source_file" ]; then
+  echo "Source file $source_file does not exist."
+  exit 1
+fi
+
+# Check if the target directory exists (if using a directory in the path)
+target_dir=$(dirname "$target_file")
+if [ ! -d "$target_dir" ]; then
+  echo "Target directory $target_dir does not exist. Creating it."
+  mkdir -p "$target_dir"
+fi
+
 # Count rows in the original file
 original_rows=$(wc -l < "$source_file")
 echo "Original file $source_file has $original_rows rows."
