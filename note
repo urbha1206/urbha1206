@@ -1,8 +1,29 @@
+Yes, that is the idea. we can use Windows share or Jumpbox to let the users to put their CSV file (with non-onprem assets), in
+that way we can stop to use datastage server for that purpose. Although, I'm not totally sure why Suma wants to avoid to use
+DataStage server to register non-onprem assets.
+
+Actually users will need to create their own job and their asset entry (entries) in Asset Management table to process the csv file
+from windows share to MFP drop zone, basically they need to use the most recent template able to read files from Windows
+share. If user wants to reuse the same job and asset configuration, they will need to keep the same CSV filename, headers and
+delimiter
+
+And actually, I would like to understand who and how the CSV file for non-onprem assets is created and why currently is
+created only in DataStage server. Are you clear on that part?
+
+Because if they can create their file in Git, we need to analyze or run a PoC with Bharath to pull that CSV file from Git when the
+G2C job be executed ‘ L
+
+
+
 When:
     WeekDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SUN']
     MonthDays: ['1', '2']
     FromTime: '1530'
     Condition: 'if (day(today()) == 1 && dayOfWeek(today()) == 7) then (dayOfWeek(today()) == 7) else (day(today()) == 1)'
+
+
+
+
 
 
 
