@@ -1,0 +1,278 @@
+## **Non-onprem Asset Registration via GitHub**
+
+### **Objective**:
+To deploy non-onprem asset registration files (DQC files or asset metadata) using **GitHub** for file storage and the **GZC framework** for processing and loading these files into the `I_UTL_DPF_ASSET_MANAGEMENT` table in DL3. This eliminates the need for the DataStage server and uses GitHub as the central repository for managing non-onprem asset files.
+
+---
+
+### **Step 1: Setting Up the GitHub Repository for Asset Files**
+
+#### 1.1 **Create a GitHub Repository**
+
+- **Repository Creation**:
+   - Create a new repository on GitHub specifically for storing **non-onprem asset files**. You can name the repository something like `non-onprem-assets`.
+   - Ensure the repository is private or public based on your organization’s policies.
+
+   **Example**:  
+   ```
+   Repository Name: non-onprem-assets
+   URL: https://github.com/your-organization/non-onprem-assets
+   ```
+
+#### 1.2 **Organize the Repository**
+
+- Inside the repository, create a dedicated folder to store asset files:
+  - Folder: `assets/`
+
+- This folder will store CSV files containing the details of non-onprem assets.
+  
+  **Example directory structure**:
+  ```
+  - non-onprem-assets/
+    - assets/
+      - non_onprem_assets_YYYYMMDD.csv
+      - non_onprem_assets_YYYYMMDD.csv
+  ```
+
+#### 1.3 **File Naming Convention**
+
+- **CSV File Naming Convention**:
+  - Use a consistent naming convention for CSV files, such as:
+    - `non_onprem_assets_YYYYMMDD.csv`, where `YYYYMMDD` is the date of file generation.
+  - This will help in identifying and retrieving the latest asset file easily.
+
+  **Example**:
+  ```
+  non_onprem_assets_20240918.csv
+  non_onprem_assets_20240919.csv
+  ```
+
+---
+
+### **Step 2: Preparing the CSV Files**
+
+#### 2.1 **CSV File Structure**
+
+The CSV files will contain the necessary details for registering non-onprem assets. The structure should match the fields of the `I_UTL_DPF_ASSET_MANAGEMENT` table in DL3.
+
+- **Required Fields**: 
+  - Asset ID
+  - Asset Name
+  - Asset Type
+  - Metadata (if any)
+  - Creation Date
+
+#### 2.2 **Automate CSV File Creation**
+
+- **Script or ETL Tool**: 
+   - Develop a script (e.g., Python, shell script, or SQL procedure) or use an ETL tool to generate the CSV file automatically. This script can pull data from the source database or system and format it into the required CSV format.
+  
+  **Example Python Script for Generating CSV**:
+  ```python
+  import csv
+  from datetime import datetime
+
+  # Define file path in GitHub (cloned locally)
+  file_path = "non-onprem-assets/assets/non_onprem_assets_{}.csv".format(datetime.now().strftime("%Y%m%d"))
+
+  # Sample asset data
+  assets = [
+      {"Asset ID": "A123", "Asset Name": "Asset 1", "Asset Type": "Type1", "Metadata": "Meta1"},
+      {"Asset ID": "A124", "Asset Name": "Asset 2", "Asset Type": "Type2", "Metadata": "Meta2"},
+  ]
+
+  # Write CSV file
+  with open(file_path, mode='w', newline='') as file:
+      writer = csv.DictWriter(file, fieldnames=assets[0].keys())
+      writer.writeheader()
+      for asset in assets:
+          writer.writerow(asset)
+
+  print("CSV file created and stored at: {}".format(file_path))
+  ```
+
+- **Automate File Generation**:
+  - Set up an automated job (e.g., using cron jobs, Jenkins, etc.) to run this script daily or weekly, depending on how frequently you need to register new non-onprem assets.
+
+#### 2.3 **Push the CSV File to GitHub**
+
+- After the CSV file is generated, it needs to be pushed to the GitHub repository.
+  
+  **Example Git Command**:
+  ```bash
+  cd /path/to/non-onprem-assets
+  git add assets/non_onprem_assets_YYYYMMDD.csv
+  git commit -m "Added non-onprem asset file for YYYY-MM-DD"
+  git push origin main
+  ```
+
+---
+
+### **Step 3: Retrieving the CSV Files from GitHub**
+
+#### 3.1 **Clone the Repository Locally**
+
+The first step in automating the process is to clone the GitHub repository on the server where the GZC framework will be processing the asset files.
+
+**Command to Clone Repository**:
+```bash
+git clone https://github.com/your-organization/non-onprem-assets.git
+```
+
+- Ensure the repository is cloned to a location accessible by the GZC framework.
+
+#### 3.2 **Automate GitHub Pull for Latest Files**
+
+- **Script to Pull Latest CSV Files**:
+  - Write a script that pulls the latest changes from the GitHub repository and identifies the latest CSV file in the `assets/` directory.
+  
+  **Example Bash Script**:
+  ```bash
+  # Navigate to the cloned repository
+  cd /path/to/non-onprem-assets
+
+  # Pull the latest changes from GitHub
+  git pull origin main
+
+  # Find the latest CSV file based on the naming convention
+  latest_file=$(ls assets/non_onprem_assets_*.csv | sort | tail -n 1)
+
+  # Check if the file exists and process it
+  if [ -f "$latest_file" ]; then
+      echo "Processing file: $latest_file"
+      # Trigger the GZC framework to process this file
+      gzc_process_file "$latest_file"
+  else
+      echo "No new CSV file found for processing"
+  fi
+  ```
+
+- **Automate File Retrieval**:
+  - Use a cron job or similar scheduler to automate this script execution, ensuring it runs at regular intervals (e.g., daily).
+
+  **Cron Job Example**:
+  ```
+  0 2 * * * /path/to/github_pull_and_process.sh >> /path/to/logs/github_pull.log 2>&1
+  ```
+
+#### 3.3 **Alternative: Using GitHub Webhooks**
+
+- **Webhook Setup**: Instead of pulling changes manually, you can use GitHub Webhooks. A webhook will notify your server whenever a new CSV file is pushed to the repository, triggering an automated process.
+  
+  **Steps**:
+  - Set up a webhook in the GitHub repository to notify a specific endpoint whenever a new file is pushed.
+  - The endpoint can be a script on your server that pulls the new file and triggers the GZC framework to process it.
+
+---
+
+### **Step 4: Process the CSV Files Using the GZC Framework**
+
+#### 4.1 **Configure GZC Framework for Local Directory Monitoring**
+
+- **Directory Configuration**: The GZC framework should monitor the local directory where the CSV files are stored (i.e., the directory where the GitHub repository is cloned).
+- Once the CSV file is detected, the GZC framework should process it to register the assets.
+
+#### 4.2 **GZC Framework File Processing Logic**
+
+- The GZC framework needs to:
+  - **Read the CSV file** and extract the asset data.
+  - **Validate the Data**: Ensure all mandatory fields (Asset ID, Name, Type, Metadata) are present and valid.
+  - **Check for Duplicates**: Ensure no duplicate asset entries exist in the `I_UTL_DPF_ASSET_MANAGEMENT` table in DL3.
+  - **Insert Data into DL3**: After validation, insert the asset details into the `I_UTL_DPF_ASSET_MANAGEMENT` table in DL3.
+  
+  **Pseudocode Example**:
+  ```python
+  def process_csv_file(file_path):
+      # Read CSV file
+      with open(file_path, 'r') as csv_file:
+          csv_reader = csv.DictReader(csv_file)
+          for row in csv_reader:
+              asset_id = row['Asset ID']
+              # Validate the asset details
+              if validate_asset(row):
+                  if not check_duplicate(asset_id):
+                      insert_into_dl3(row)
+                  else:
+                      log_error(f"Duplicate asset found: {asset_id}")
+              else:
+                  log_error(f"Invalid data in file: {row}")
+  ```
+
+#### 4.3 **Error Handling and Logging**
+
+- Ensure that the GZC framework logs all errors, such as:
+  - File read errors.
+  - Data validation failures.
+  - Duplicate asset detection.
+  
+  **Logging Example**:
+  ```python
+  def log_error(message):
+      with open("/path/to/logs/errors.log", "a") as log_file:
+          log_file.write(f"{datetime.now()} - ERROR: {message}\n")
+  ```
+
+- **Notification**: Set up notifications (via Slack or email) for critical failures in the process.
+
+---
+
+### **Step 5: Automation and Testing**
+
+#### 5.1 **Automate the Full Workflow**
+
+- Automate the full process using the following components:
+  - **Cron Job or Jenkins**: Automate the pulling of CSV files from Git
+
+Hub.
+  - **GZC Framework**: Automatically process files as soon as they are pulled.
+  - **Error Handling**: Ensure logs and notifications are set up to monitor the health of the process.
+
+#### 5.2 **Testing the Process**
+
+- **Test the End-to-End Workflow**:
+  - Create a test CSV file, push it to GitHub, and ensure the entire process works, from file retrieval to registration in DL3.
+  
+- **Edge Case Testing**:
+  - Test with invalid data, missing fields, or duplicate records to ensure the system handles errors gracefully.
+
+---
+
+### **Step 6: Documentation and Communication**
+
+#### 6.1 **Update Internal Documentation**
+
+- **go/GZCwiki**: Document the full process on the **go/GZCwiki** page, including:
+  - How to set up the GitHub repository.
+  - CSV file creation process.
+  - Steps for automating file retrieval.
+  - GZC framework configuration.
+  - Error handling and troubleshooting steps.
+
+#### 6.2 **Communicate the Changes**
+
+- **Slack Announcement**:
+  
+  **Example Message**:
+  ```
+  Subject: New Process for Non-onprem Asset Registration via GitHub and GZC Framework
+
+  Hi Team,
+
+  We have implemented a new process for registering non-onprem assets in the I_UTL_DPF_ASSET_MANAGEMENT table in DL3. This process now retrieves CSV files containing asset details from a GitHub repository and processes them using the GZC framework, without relying on the DataStage server.
+
+  Key Points:
+  - CSV files are stored in the GitHub repository: [non-onprem-assets](https://github.com/your-organization/non-onprem-assets).
+  - The GZC framework processes the files and registers the assets in DL3.
+  - Automated logging and error handling are in place.
+
+  Please refer to the full documentation on go/GZCwiki.
+
+  Best regards,
+  [Your Name]
+  ```
+
+---
+
+### **Conclusion**
+
+By following this detailed step-by-step guide, you can efficiently register non-onprem assets using a GitHub-based workflow, automate the process, and integrate it with the GZC framework to update the `I_UTL_DPF_ASSET_MANAGEMENT` table in DL3. This method eliminates the reliance on DataStage and simplifies the process, making it scalable and easy to manage.
