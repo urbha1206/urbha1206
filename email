@@ -1,0 +1,226 @@
+To create a **dbt macro** that sends emails as a **post-hook**, we will define a reusable macro to send emails using Python’s `smtplib` module and invoke this macro as a post-hook in your dbt model or in your dbt project.
+
+Here’s how you can set it up:
+
+---
+
+### **Step-by-Step Process to Create a dbt Macro to Send Emails as a Post-Hook**
+
+#### **Step 1: Define the Email-Sending Macro**
+
+First, we will create a macro that can send emails. This macro will take in dynamic parameters like the SMTP server, email addresses, subject, and body.
+
+**File**: `macros/send_email.sql`
+
+```jinja
+{% macro send_email(smtp_server, smtp_port, smtp_username, smtp_password, from_email, to_emails, subject, body) %}
+    {% set smtplib = modules.smtplib %}
+    {% set email_module = modules.email %}
+    {% set MIMEText = email_module.mime.text.MIMEText %}
+    {% set MIMEMultipart = email_module.mime.multipart.MIMEMultipart %}
+    
+    {% try %}
+        # Create the email message
+        {% set message = MIMEMultipart() %}
+        {% do message.__setitem__('From', from_email) %}
+        {% do message.__setitem__('To', ', '.join(to_emails)) %}
+        {% do message.__setitem__('Subject', subject) %}
+        {% set body_part = MIMEText(body, 'plain') %}
+        {% do message.attach(body_part) %}
+        
+        # Connect to the SMTP server and send the email
+        {% set server = smtplib.SMTP(smtp_server, smtp_port) %}
+        {% do server.starttls() %}
+        {% do server.login(smtp_username, smtp_password) %}
+        {% do server.sendmail(from_email, to_emails, message.as_string()) %}
+        {% do server.quit() %}
+        {{ log("Email sent successfully to " ~ ', '.join(to_emails), info=True) }}
+    
+    {% except Exception as e %}
+        {{ log("Failed to send email: " ~ e.args[0], warning=True) }}
+    {% endtry %}
+{% endmacro %}
+```
+
+**Explanation**:
+
+- **Imports**: We import Python modules `smtplib` and `email` to handle email sending.
+- **Try-Except Block**: This ensures that if an error occurs during email sending, it is caught, and an appropriate message is logged.
+- **Log Messages**: Use `log()` to output success or failure information into dbt logs.
+
+---
+
+#### **Step 2: Configure Variables in `dbt_project.yml`**
+
+To make the macro reusable across different models and runs, we will configure dynamic variables such as the SMTP server details, sender/recipient emails, subject, and body.
+
+**File**: `dbt_project.yml`
+
+```yaml
+vars:
+  smtp_server: 'smtp.example.com'  # Replace with your SMTP server
+  smtp_port: 587                   # Replace with your SMTP port
+  smtp_username: '{{ env_var("SMTP_USERNAME") }}'  # Use environment variables for sensitive data
+  smtp_password: '{{ env_var("SMTP_PASSWORD") }}'
+  from_email: 'your_email@example.com'  # Replace with your email address
+  to_emails: ['recipient1@example.com', 'recipient2@example.com']  # Replace with recipient emails
+  email_subject: 'dbt Model Run Notification'
+  email_body: 'The dbt model run has completed successfully.'
+```
+
+**Explanation**:
+
+- **SMTP Configuration**: These variables define the SMTP connection details.
+- **Recipients & Content**: We configure the `to_emails`, `email_subject`, and `email_body` to be dynamic. You can modify these during runtime if needed.
+
+---
+
+#### **Step 3: Create a Model and Attach the Post-Hook**
+
+You can now create a dbt model and attach the email-sending macro as a **post-hook** to send an email after the model completes.
+
+Here’s how you can define a model and attach the `send_email` macro as a post-hook.
+
+**File**: `models/my_model.sql`
+
+```sql
+-- This is an example model that selects from another table
+
+WITH source_data AS (
+    SELECT * 
+    FROM {{ ref('source_table') }}
+)
+
+SELECT * 
+FROM source_data
+
+-- Attach the post-hook to send an email notification
+{% post_hook %}
+  "{{ send_email(
+        smtp_server=var('smtp_server'),
+        smtp_port=var('smtp_port'),
+        smtp_username=var('smtp_username'),
+        smtp_password=var('smtp_password'),
+        from_email=var('from_email'),
+        to_emails=var('to_emails'),
+        subject=var('email_subject'),
+        body=var('email_body')
+    ) }}"
+{% endpost_hook %}
+```
+
+**Explanation**:
+
+- **Post-Hook**: We use the `post_hook` block to trigger the `send_email` macro after the model runs.
+- **Dynamic Parameters**: The variables defined in the `dbt_project.yml` file are passed into the macro.
+
+---
+
+#### **Step 4: Ensure SMTP Credentials Are Set Securely**
+
+Make sure that the sensitive SMTP credentials (username and password) are set as environment variables. This ensures that sensitive data is not hard-coded in your dbt project.
+
+- **For local development**:
+
+  ```bash
+  export SMTP_USERNAME='your_smtp_username'
+  export SMTP_PASSWORD='your_smtp_password'
+  ```
+
+- **For dbt Cloud**:
+
+  - Go to **Account Settings** > **Environment Variables**.
+  - Add `SMTP_USERNAME` and `SMTP_PASSWORD` with their respective values.
+
+---
+
+#### **Step 5: Test the Macro and Post-Hook**
+
+Now you can run your dbt model and verify that the post-hook sends the email successfully.
+
+**Run the dbt model**:
+
+```bash
+dbt run --models my_model
+```
+
+**Check Your Email**:
+
+- The email should be sent to the recipients defined in `to_emails`.
+- The subject and body will be dynamically populated based on what you specified in the `dbt_project.yml`.
+
+**Check dbt Logs**:
+
+- Look for the log messages in dbt to ensure that the macro executed successfully.
+- Example success log: `"Email sent successfully to recipient1@example.com, recipient2@example.com"`
+- If an error occurs, you’ll see a message like `"Failed to send email: [Error Details]"`.
+
+---
+
+### **Step 6: Customizing the Post-Hook and Model**
+
+You can modify the **email content** and **recipients** dynamically based on the model. For example, if you want to send a different email for different models or want to pass specific information from the model into the email body, you can adjust the post-hook.
+
+**Example: Custom Post-Hook per Model**
+
+If you want to send a custom email for each model, you can override the subject and body inside the model file:
+
+```sql
+WITH source_data AS (
+    SELECT * 
+    FROM {{ ref('source_table') }}
+)
+
+SELECT * 
+FROM source_data
+
+-- Custom email for this specific model
+{% post_hook %}
+  "{{ send_email(
+        smtp_server=var('smtp_server'),
+        smtp_port=var('smtp_port'),
+        smtp_username=var('smtp_username'),
+        smtp_password=var('smtp_password'),
+        from_email=var('from_email'),
+        to_emails=['team@example.com'],  -- Override recipients for this model
+        subject='Model my_model.sql has completed!',
+        body='The model my_model.sql has finished running successfully.'
+    ) }}"
+{% endpost_hook %}
+```
+
+---
+
+### **Troubleshooting Tips**
+
+1. **SMTP Errors**:
+   - Ensure that the SMTP server credentials (username, password, host, and port) are correct.
+   - Verify that the SMTP server allows external connections.
+
+2. **dbt Cloud Limitations**:
+   - **dbt Cloud** might restrict outbound connections or Python module usage, which could prevent sending emails from within dbt Cloud.
+   - In this case, consider using dbt Cloud’s webhook functionality or running dbt locally on a server that you control.
+
+3. **Invalid Email Addresses**:
+   - Ensure that all email addresses in `to_emails` are valid and formatted correctly.
+
+---
+
+### **Next Steps**
+
+1. **Test**: Run your dbt models and verify that emails are sent correctly.
+2. **Secure**: Make sure your SMTP credentials are stored securely using environment variables.
+3. **Customize**: Tailor the macro or post-hooks to meet your specific notification needs for different models or workflows.
+
+---
+
+### **Alternative Approaches**
+
+If dbt Cloud or your environment restricts you from sending emails directly, consider the following alternatives:
+
+1. **Webhooks**: Use dbt Cloud’s webhook feature to trigger an external service that sends emails.
+2. **External Orchestration**: Use an orchestration tool like **Apache Airflow** or **Prefect** to handle email notifications after dbt jobs complete.
+
+---
+
+By following these steps, you can successfully implement a post-hook in dbt to send email notifications after model execution.
