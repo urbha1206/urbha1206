@@ -1,3 +1,108 @@
+Integrating a **webhook in dbt Cloud** with **Slack Incoming Webhook** allows you to receive notifications in Slack when certain events occur in dbt Cloud (such as job success, failure, or other job events). Here's a detailed step-by-step guide to set this up.
+
+### Step 1: Create a Slack Incoming Webhook
+
+1. **Log in to Slack**: 
+   - Go to [Slack](https://slack.com/) and log in to your workspace where you want to receive notifications.
+
+2. **Access Slack's App Directory**:
+   - Click on your workspace name in the top-left corner.
+   - Select **Settings & administration** > **Manage apps**.
+
+3. **Search for "Incoming Webhooks"**:
+   - In the **Slack App Directory**, search for **"Incoming Webhooks"**.
+   - Select **Incoming Webhooks** from the search results.
+
+4. **Add Incoming Webhooks to Slack**:
+   - Click **Add to Slack**.
+
+5. **Select a Channel**:
+   - Choose the channel where you want dbt Cloud to send notifications (e.g., `#data-alerts`).
+   - Click **Allow**.
+
+6. **Copy the Webhook URL**:
+   - After adding the Incoming Webhook, Slack will provide a unique **Webhook URL**.
+   - **Copy** this URL, as you will use it in the next step to configure dbt Cloud.
+
+---
+
+### Step 2: Configure dbt Cloud to Use the Slack Webhook
+
+1. **Log in to dbt Cloud**:
+   - Go to [dbt Cloud](https://cloud.getdbt.com/) and log in with your credentials.
+
+2. **Navigate to the Job You Want to Set Up Notifications For**:
+   - From the sidebar, go to **Deploy** > **Jobs**.
+   - Select the job that you want to receive Slack notifications for.
+
+3. **Scroll to the Notifications Section**:
+   - On the job’s configuration page, scroll down to the **Notifications** section.
+
+4. **Add a New Notification**:
+   - Click **Add Notification**.
+
+5. **Choose Webhook as the Notification Type**:
+   - In the dropdown for **Notification Type**, select **Webhook**.
+
+6. **Paste the Slack Webhook URL**:
+   - In the **Webhook URL** field, paste the **Slack Webhook URL** you copied from Step 1.
+
+7. **Set the Notification Conditions**:
+   - You can choose when the notification should be sent:
+     - **On Job Success**: Notification is sent when the job completes successfully.
+     - **On Job Failure**: Notification is sent when the job fails.
+     - **On Job Skipped**: Notification is sent if the job is skipped.
+     - **On Job Canceled**: Notification is sent if the job is canceled.
+   - Choose any or all of these options depending on your needs.
+
+8. **Save the Notification**:
+   - Once the webhook URL is set, click **Save**.
+
+---
+
+### Step 3: Test the Integration
+
+1. **Manually Run the Job in dbt Cloud**:
+   - To verify the integration, manually trigger a run of the job in dbt Cloud by clicking **Run Job**.
+   
+2. **Check Slack for the Notification**:
+   - After the job runs, go to your designated Slack channel (where the webhook was configured) and check for the notification.
+   - The message will typically include the job name, status, and details like start time, end time, and any other relevant information.
+
+---
+
+### Example Slack Message from Webhook
+
+The message that Slack receives might look something like this:
+
+```
+🚨 **dbt Job Failure**
+Job Name: `dbt_daily_refresh`
+Status: `Failed`
+Duration: `7 minutes`
+Timestamp: `2024-10-09 13:45:00`
+Check the details here: [dbt Cloud Job URL]
+```
+
+You can customize the notification payload in dbt Cloud, but the default webhook message contains key information such as the job status and a link to the dbt Cloud job details.
+
+---
+
+### Customization (Optional)
+
+Although dbt Cloud’s webhook payload is fairly straightforward, if you need more control over message formatting, you can:
+- **Build a middleware** service to catch the webhook from dbt Cloud, process the data (e.g., format it, add extra metadata), and send it to Slack using the Slack Web API.
+- **Use third-party automation tools** like Zapier or Make (formerly Integromat) to intercept the dbt webhook, customize it, and send it to Slack.
+
+---
+
+### Conclusion
+
+By following these steps, you'll have dbt Cloud job notifications sent directly to a Slack channel via an Incoming Webhook. This integration helps keep your team informed about the status of data transformations in real-time, allowing quick actions on job failures or other critical events.
+
+
+--------------------------------------------------------
+
 To integrate Slack notifications without using a specific dbt app but instead utilizing webhooks, you can follow these steps. This method involves creating a custom webhook URL in Slack and configuring dbt Cloud to send notifications via that webhook whenever specific events (like job completion, failure, etc.) occur.
 
 ### Step 1: Create a Webhook in Slack
