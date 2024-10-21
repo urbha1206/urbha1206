@@ -1,3 +1,42 @@
+Step 1: Log into dbt Cloud
+
+Screenshot: You will see a login page where you input your credentials (email, password, or SSO options like Google).
+Image Description: A standard login screen with "Email" and "Password" fields.
+Step 2: Access the Job Configuration
+
+Screenshot: After logging in, you'll see the dbt Cloud dashboard. On the left-hand menu, select the “Jobs” tab to view a list of your jobs.
+Image Description: A navigation bar on the left with "Jobs" among other options. The main screen shows job names and their statuses.
+Step 3: Navigate to the Notifications Section
+
+Screenshot: Inside the specific job's configuration, you will see a set of tabs (like “Overview,” “Schedules,” “Notifications”). Click on "Notifications."
+Image Description: A tabbed layout where the "Notifications" tab is highlighted, showing notification settings below.
+Step 4: Add an Email Notification
+
+Screenshot: You’ll see a button labeled Add Notification in the "Notifications" section. Clicking this allows you to add a new notification.
+Image Description: A button labeled “Add Notification” with options for email notifications.
+Step 5: Select Event Triggers for Notifications
+
+Screenshot: Once you click "Add Notification," a form will appear asking you to select notification events such as On Success, On Failure, or On Cancel.
+Image Description: Checkboxes for different triggers with labels for success, failure, and cancelation notifications.
+Step 6: Enter Email Recipients
+
+Screenshot: A field will appear allowing you to input one or more email addresses for recipients.
+Image Description: A text field labeled “Email Recipients” where you enter multiple email addresses.
+Step 7: Configure SMTP Server (Optional)
+
+Screenshot: If you're using custom SMTP settings, this section will show fields for smtp_server, smtp_port, username, and password.
+Image Description: A set of fields labeled with “SMTP Server”, “SMTP Port”, “SMTP Username”, and “SMTP Password.”
+Step 8: Save the Job
+
+Screenshot: Once you've configured the notifications, there will be a Save or Update Job button at the bottom of the page.
+Image Description: A "Save" or "Update Job" button at the bottom of the notification settings form.
+Step 9: Test the Notification Setup (Optional)
+
+Screenshot: You can run the job manually from the “Run Job” button on the Job Overview page.
+Image Description: A large button labeled “Run Job” in the job’s main overview panel.
+Step 10: Confirm Emails are Received
+-----------------------------------------------------
+
 To create a **dbt macro** that sends emails as a **post-hook**, we will define a reusable macro to send emails using Python’s `smtplib` module and invoke this macro as a post-hook in your dbt model or in your dbt project.
 
 Here’s how you can set it up:
