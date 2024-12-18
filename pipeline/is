@@ -1,3 +1,403 @@
+
+dynamic_version_pnc.SQL
+
+{{ config(materialized="ephemeral") }}
+
+with ver_from_table as (
+    select 
+        max(fin_scnro_nm) as version 
+    from 
+        {{ source("SRC_PNC_RPTG", "PNC_RPTG") }} 
+    where 
+        upper(fin_scnro_nm) like '%{{ var("v_Forecast") }}%'
+),
+ODate as (
+    select 
+        '{{ var("CTM_ODATE") }}'::date as run_date
+),
+quarter_dates as (
+    select
+        run_date,
+        case
+            when extract(QUARTER FROM run_date) = 1 then dateadd('day', -1, date_trunc('year', run_date))
+            when extract(QUARTER FROM run_date) = 2 then dateadd('day', -1, dateadd(month, 3, date_trunc('year', run_date)))
+            when extract(QUARTER FROM run_date) = 3 then dateadd('day', -1, dateadd(month, 6, date_trunc('year', run_date)))
+            when extract(QUARTER FROM run_date) = 4 then dateadd('day', -1, dateadd(month, 9, date_trunc('year', run_date)))
+        end as quarter_end_date
+    from 
+        ODate
+),
+version_name as (
+    select
+        v.version,
+        qd.quarter_end_date,
+        to_char(qd.quarter_end_date, 'YYYY_MM.DD') || '_' ||
+        LPAD(split_part(v.version, '_', 1), 2, '0') || '.' || '01.FCST' as VER_NM
+    from 
+        ver_from_table v
+    cross join 
+        quarter_dates qd
+)
+select 
+    VER_NM 
+from 
+    version_name
+
+
+IGL_S_UTL_PNC_ACCT_DETAIL_REF.SQL
+
+
+{{
+config(
+    materialized='ephemeral'
+)
+}}
+
+with TMP_IGL_S_UTL_PNC_ACCT_DETAIL_REF AS (
+    SELECT
+        IGL_CMPY_NM,
+        FIN_CMPY_DESC,
+        FIN_CMPY_NM,
+        FIN_COST_CENTR_NM,
+        IGL_LOC_NM,
+        FIN_LOC_DESC,
+        FIN_LOC_NM,
+        IGL_ACCT_NM,
+        FIN_ACCT_DESC,
+        FIN_ACCT_NM,
+        IGL_PROD_NM,
+        FIN_PROD_DESC,
+        FIN_PROD_NM,
+        FIN_AFFL_NM,
+        FIN_PLAN_ELEM_NM,
+        IGL_RISK_NM,
+        FIN_RISK_NM,
+        ROLLUP_TYPE,
+        IGL_TOB_NM,
+        FIN_TOB_NM,
+        FIN_INS_PLAN_NM,
+        FIN_BUS_TENR_NM,
+        FIN_BUS_TYPE_NM,
+        IGL_CLASS_ID,
+        AS_OF_DT,
+        RUN_TS,
+        ACTIVE_IND,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) - 1, '-03-31') as PREV_YR_QTD1,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) - 1, '-06-30') as PREV_YR_QTD2,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) - 1, '-09-30') as PREV_YR_QTD3,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) - 1, '-12-31') as PREV_YR_YTD,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date), '-03-31') as CURR_YR_QTD1,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date), '-06-30') as CURR_YR_QTD2,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date), '-09-30') as CURR_YR_QTD3,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date), '-12-31') as CURR_YR_QTD4,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 1, '-03-31') as FCST_YR_QTD1,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 1, '-06-30') as FCST_YR_QTD2,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 1, '-09-30') as FCST_YR_QTD3,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 1, '-12-31') as FCST_YR_QTD4,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 2, '-03-31') as FCST_YR1_QTD1,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 2, '-06-30') as FCST_YR1_QTD2,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 2, '-09-30') as FCST_YR1_QTD3,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 2, '-12-31') as FCST_YR1_QTD4,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 3, '-03-31') as FCST_YR2_QTD1,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 3, '-06-30') as FCST_YR2_QTD2,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 3, '-09-30') as FCST_YR2_QTD3,
+        concat(date_part('year', '{{ var("CTM_ODATE") }}'::date) + 3, '-12-31') as FCST_YR2_QTD4
+    FROM 
+        {{ source('REF_SRC_PNC_RPTG', 'IGL_S_UTL_PNC_ACCT_DETAIL_REF') }}
+    WHERE 
+        upper(igl_trgt_table_nm) = '{{ var("v_TRGT_TABLE_NM") }}'
+        AND upper(FIN_PLAN_ELEM_NM) = '{{ var("v_Gaap_Stat_CD") }}'
+        AND ACTIVE_IND = 'Y'
+)
+-- Pivot QTR_DATES
+SELECT 
+    * 
+FROM 
+    TMP_IGL_S_UTL_PNC_ACCT_DETAIL_REF 
+UNPIVOT (
+    QTR_DATES 
+    FOR PIVOT_COLUMN IN (
+        PREV_YR_QTD1, PREV_YR_QTD2, PREV_YR_QTD3, PREV_YR_YTD,
+        CURR_YR_QTD1, CURR_YR_QTD2, CURR_YR_QTD3, CURR_YR_QTD4,
+        FCST_YR_QTD1, FCST_YR_QTD2, FCST_YR_QTD3, FCST_YR_QTD4,
+        FCST_YR1_QTD1, FCST_YR1_QTD2, FCST_YR1_QTD3, FCST_YR1_QTD4,
+        FCST_YR2_QTD1, FCST_YR2_QTD2, FCST_YR2_QTD3, FCST_YR2_QTD4
+    )
+)
+ORDER BY 
+    QTR_DATES ASC;
+
+
+pnc_rpt.SQL
+
+SELECT
+    FIN_ACCT_NM,
+    FIN_CMPY_NM,
+    FIN_PROD_NM,
+    FIN_COST_CENTR_NM,
+    FIN_AFFL_NM,
+    FSCL_MNTH_NM,
+    FY_NM,
+    FIN_SCNRO_NM,
+    FIN_VER_NM,
+    FIN_PLAN_ELEM_NM,
+    FIN_VIEW_NM,
+    FIN_BUS_TYPE_NM,
+    FIN_CUR_NM,
+    FIN_LOC_NM,
+    FIN_INS_PLAN_NM,
+    FIN_BUS_TENR_NM,
+    VALUE_NR,
+    AS_OF_DT
+FROM 
+    {{ source('SRC_PNC_RPTG', 'PNC_RPTG') }}
+WHERE 
+    fy_nm IN (
+        '{{ fiscal_years["prev_year"] }}',
+        '{{ fiscal_years["curr_year"] }}',
+        '{{ fiscal_years["fcst_year1"] }}',
+        '{{ fiscal_years["fcst_year2"] }}',
+        '{{ fiscal_years["fcst_year3"] }}'
+    )
+    AND (
+        UPPER(fin_scnro_nm) LIKE '%{{ var("v_Actual") }}%'
+        OR UPPER(fin_scnro_nm) LIKE '%{{ var("v_Forecast") }}%'
+    )
+    AND UPPER(fin_view_nm) = 'PERIODIC'
+    AND UPPER(FIN_PLAN_ELEM_NM) = '{{ var("v_Gaap_Stat_CD") }}';
+
+
+pnc_bs.SQL
+
+{{
+config(
+    materialized='ephemeral'
+)
+}}
+
+{% set ODATE = var("CTM_ODATE") %}
+{% set fiscal_years = get_fiscal_years() %}
+
+with pnc_acc_dtl_ref as (
+    SELECT
+        IGL_CMPY_NM, FIN_CMPY_DESC, FIN_CMPY_NM, FIN_COST_CENTR_NM, IGL_LOC_NM, FIN_LOC_DESC, FIN_LOC_NM,
+        IGL_ACCT_NM, FIN_ACCT_DESC, FIN_ACCT_NM, IGL_PROD_NM, FIN_PROD_DESC, FIN_PROD_NM, FIN_AFFL_NM, FIN_PLAN_ELEM_NM,
+        IGL_RISK_NM, FIN_RISK_NM, ROLLUP_TYPE, IGL_TOB_NM, FIN_TOB_NM, FIN_INS_PLAN_NM, FIN_BUS_TENR_NM,
+        FIN_BUS_TYPE_NM, IGL_CLASS_ID, CAST(QTR_DATES AS DATE) AS qtr_dates
+    FROM {{ ref('IGL_S_UTL_PNC_ACCT_DETAIL_REF') }}
+),
+ref_columns as (
+    SELECT DISTINCT
+        a.IGL_CMPY_NM, a.FIN_CMPY_DESC, a.FIN_CMPY_NM, a.FIN_COST_CENTR_NM, a.IGL_LOC_NM, a.FIN_LOC_DESC, a.FIN_LOC_NM,
+        a.IGL_ACCT_NM, a.FIN_ACCT_DESC, a.FIN_ACCT_NM, a.IGL_PROD_NM, a.FIN_PROD_DESC, a.FIN_PROD_NM, a.FIN_AFFL_NM, a.FIN_PLAN_ELEM_NM,
+        a.IGL_RISK_NM, a.FIN_RISK_NM, a.ROLLUP_TYPE, a.IGL_TOB_NM, a.FIN_TOB_NM, a.FIN_INS_PLAN_NM, a.FIN_BUS_TENR_NM,
+        a.FIN_BUS_TYPE_NM, a.IGL_CLASS_ID,
+        fy.fiscal_year,
+        fm.fiscal_month,
+        CASE 
+            WHEN fm.fiscal_month IN ('MAR', 'JUN', 'SEP', 'DEC') THEN 
+                DATE(fy.fiscal_year || '-' || 
+                    CASE 
+                        WHEN fm.fiscal_month = 'MAR' THEN '03-31'
+                        WHEN fm.fiscal_month = 'JUN' THEN '06-30'
+                        WHEN fm.fiscal_month = 'SEP' THEN '09-30'
+                        WHEN fm.fiscal_month = 'DEC' THEN '12-31'
+                    END)
+            ELSE NULL
+        END AS QED,
+        v.version
+    FROM pnc_acc_dtl_ref a
+    CROSS JOIN (
+        SELECT '{{ fiscal_years["pryear"] }}' AS fiscal_year UNION ALL 
+        SELECT '{{ fiscal_years["current_year"] }}' UNION ALL 
+        SELECT '{{ fiscal_years["fcstyrl"] }}' UNION ALL 
+        SELECT '{{ fiscal_years["fcstyr2"] }}' UNION ALL 
+        SELECT '{{ fiscal_years["fcstyr3"] }}'
+    ) fy
+    CROSS JOIN (
+        SELECT 'JAN' AS fiscal_month UNION ALL SELECT 'FEB' UNION ALL SELECT 'MAR' UNION ALL 
+        SELECT 'APR' UNION ALL SELECT 'MAY' UNION ALL SELECT 'JUN' UNION ALL 
+        SELECT 'JUL' UNION ALL SELECT 'AUG' UNION ALL SELECT 'SEP' UNION ALL 
+        SELECT 'OCT' UNION ALL SELECT 'NOV' UNION ALL SELECT 'DEC'
+    ) AS fm
+    CROSS JOIN (
+        SELECT '{{ var("v_Actual") }}' AS version UNION ALL 
+        SELECT '{{ var("v_Forecast") }}' AS version
+    ) v
+),
+filtered_src_data1 as (
+    SELECT 
+        SRC.FIN_ACCT_NM, SRC.FIN_CMPY_NM, SRC.FIN_PROD_NM,
+        SRC.FIN_LOC_NM, SRC.FIN_COST_CENTR_NM, SRC.FIN_PLAN_ELEM_NM,
+        SRC.FIN_INS_PLAN_NM, SRC.FIN_BUS_TYPE_NM, SRC.FIN_AFFL_NM,
+        SRC.FIN_BUS_TENR_NM, REF.FIN_LOC_DESC, REF.FIN_CMPY_DESC, SRC.FY_NM, SRC.FSCL_MTH_NM,
+        CASE
+            WHEN UPPER(SRC.FIN_SCNRO_NM) LIKE '%{{ var("v_Forecast") }}%' THEN '{{ var("v_Forecast") }}'
+            WHEN UPPER(SRC.FIN_SCNRO_NM) LIKE '%{{ var("v_Actual") }}%' THEN '{{ var("v_Actual") }}'
+            ELSE NULL
+        END AS DER_VERSION,
+        VALUE_NR
+    FROM {{ ref('PNC_RPTG') }} SRC
+    JOIN (
+        SELECT DISTINCT 
+            IGL_CMPY_NM, FIN_CMPY_DESC, FIN_CMPY_NM, FIN_COST_CENTR_NM, IGL_LOC_NM, FIN_LOC_DESC, FIN_LOC_NM,
+            IGL_ACCT_NM, FIN_ACCT_DESC, FIN_ACCT_NM, IGL_PROD_NM, FIN_PROD_DESC, FIN_PROD_NM, FIN_AFFL_NM, FIN_PLAN_ELEM_NM,
+            IGL_RISK_NM, FIN_RISK_NM, ROLLUP_TYPE, IGL_TOB_NM, FIN_TOB_NM, FIN_INS_PLAN_NM, FIN_BUS_TENR_NM,
+            FIN_BUS_TYPE_NM, IGL_CLASS_ID, QED 
+        FROM ref_columns
+    ) REF
+    ON REF.FIN_ACCT_NM = SRC.FIN_ACCT_NM 
+    AND REF.FIN_CMPY_NM = SRC.FIN_CMPY_NM 
+    AND REF.FIN_PROD_NM = SRC.FIN_PROD_NM 
+    AND REF.FIN_LOC_NM = SRC.FIN_LOC_NM 
+    AND REF.FIN_COST_CENTR_NM = SRC.FIN_COST_CENTR_NM 
+    AND REF.FIN_PLAN_ELEM_NM = SRC.FIN_PLAN_ELEM_NM 
+    AND REF.FIN_INS_PLAN_NM = SRC.FIN_INS_PLAN_NM 
+    AND REF.FIN_BUS_TYPE_NM = SRC.FIN_BUS_TYPE_NM 
+    AND REF.FIN_AFFL_NM = SRC.FIN_AFFL_NM 
+    AND REF.FIN_BUS_TENR_NM = SRC.FIN_BUS_TENR_NM 
+    AND UPPER(SRC.FIN_VIEW_NM) = 'PERIODIC'
+    WHERE 
+        UPPER(SRC.FIN_SCNRO_NM) LIKE '%{{ var("v_Actual") }}%' 
+        OR UPPER(SRC.FIN_SCNRO_NM) LIKE '%{{ var("v_Forecast") }}%'
+)
+,FILTERED_SRC_DATA AS (
+    SELECT DISTINCT * FROM filtered_src_data1
+)
+,REF_COLUMNS_BALANCE AS (
+    SELECT 
+        A.*, 
+        COALESCE(B.VALUE_NR, 0) AS VALUE_NR
+    FROM ref_columns A 
+    LEFT JOIN FILTERED_SRC_DATA B
+    ON B.FIN_ACCT_NM = A.FIN_ACCT_NM 
+    AND CONCAT('FY', RIGHT(CAST(A.FISCAL_YEAR AS STRING), 2)) = B.FY_NM
+    AND A.FISCAL_MONTH = B.FSCL_MTH_NM
+    AND A.VERSION = B.DER_VERSION
+)
+,MONTHLY_YTD AS (
+    SELECT 
+        *, 
+        SUM(VALUE_NR) OVER (
+            PARTITION BY FIN_ACCT_NM, FIN_CMPY_NM, FIN_PROD_NM, FIN_LOC_NM, FIN_COST_CENTR_NM, FIN_PLAN_ELEM_NM, FIN_INS_PLAN_NM, FIN_BUS_TYPE_NM, FIN_AFFL_NM, FIN_BUS_TENR_NM, FIN_LOC_DESC, FIN_CMPY_DESC, FISCAL_YEAR, VERSION
+            ORDER BY DECODE(FISCAL_MONTH, 'JAN', 1, 'FEB', 2, 'MAR', 3, 'APR', 4, 'MAY', 5, 'JUN', 6, 'JUL', 7, 'AUG', 8, 'SEP', 9, 'OCT', 10, 'NOV', 11, 'DEC', 12)
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS YTD_BALANCE
+    FROM REF_COLUMNS_BALANCE
+)
+,FILTERED_DATA AS (
+    SELECT 
+        * 
+    FROM MONTHLY_YTD
+    WHERE QED IS NOT NULL
+)
+SELECT
+    FIN_ACCT_NM,
+    FIN_CMPY_NM,
+    FIN_PROD_NM,
+    FIN_LOC_NM,
+    FIN_COST_CENTR_NM,
+    FIN_PLAN_ELEM_NM,
+    FIN_INS_PLAN_NM,
+    FIN_BUS_TYPE_NM,
+    FIN_AFFL_NM,
+    FIN_BUS_TENR_NM,
+    FIN_LOC_DESC,
+    FIN_CMPY_DESC,
+    IGL_PROD_NM,
+    IGL_CMPY_NM,
+    IGL_TOB_NM,
+    IGL_CLASS_ID,
+    FISCAL_YEAR,
+    QED,
+    TOTAL_YTD_BALANCE AS VALUE_NR,
+    VERSION
+FROM FILTERED_DATA
+ORDER BY 
+    FIN_ACCT_NM, FIN_CMPY_NM, FIN_PROD_NM,
+    FIN_LOC_NM, FIN_COST_CENTR_NM, FIN_PLAN_ELEM_NM,
+    FIN_INS_PLAN_NM, FIN_BUS_TYPE_NM, FIN_AFFL_NM,
+    FIN_BUS_TENR_NM, FIN_LOC_DESC, FIN_CMPY_DESC, IGL_PROD_NM, FISCAL_YEAR, QED;
+
+
+pnc_is.SQL
+
+{{ CONFIG(MATERIALIZED="EPHEMERAL") }}
+
+{% SET FISCAL_YEARS = GET_FISCAL_YEARS() %}
+{% SET ODATE = VAR("CTM_ODATE") %}
+
+WITH PNC_BS AS (
+    SELECT
+        FIN_ACCT_NM, FIN_CMPY_NM, FIN_PROD_NM, FIN_LOC_NM, FIN_COST_CENTR_NM,
+        FIN_PLAN_ELEM_NM, FIN_INS_PLAN_NM, FIN_BUS_TYPE_NM, FIN_AFFL_NM,
+        FIN_BUS_TENR_NM, FIN_LOC_DESC, FIN_CMPY_DESC, IGL_PROD_NM, IGL_CMPY_NM,
+        IGL_TOB_NM, IGL_CLASS_ID, FISCAL_YEAR, QED AS QTR_DATES, VALUE_NR, VERSION
+    FROM {{ REF("PNC_BS") }}
+),
+QTR_VALUES AS (
+    SELECT *,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)-1, '-03-31') AND UPPER(VERSION) = '{{ VAR("V_ACTUAL") }}' THEN VALUE_NR END AS PREV_YR_Q1,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)-1, '-06-30') AND UPPER(VERSION) = '{{ VAR("V_ACTUAL") }}' THEN VALUE_NR END AS PREV_YR_Q2,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)-1, '-09-30') AND UPPER(VERSION) = '{{ VAR("V_ACTUAL") }}' THEN VALUE_NR END AS PREV_YR_Q3,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)-1, '-12-31') AND UPPER(VERSION) = '{{ VAR("V_ACTUAL") }}' THEN VALUE_NR END AS PREV_YR_Q4,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE), '-03-31') AND UPPER(VERSION) = '{{ VAR("V_ACTUAL") }}' THEN VALUE_NR END AS CURR_YR_Q1_ACT,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE), '-06-30') AND UPPER(VERSION) = '{{ VAR("V_ACTUAL") }}' THEN VALUE_NR END AS CURR_YR_Q2_ACT,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE), '-09-30') AND UPPER(VERSION) = '{{ VAR("V_ACTUAL") }}' THEN VALUE_NR END AS CURR_YR_Q3_ACT,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE), '-12-31') AND UPPER(VERSION) = '{{ VAR("V_ACTUAL") }}' THEN VALUE_NR END AS CURR_YR_Q4_ACT,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE), '-03-31') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS CURR_YR_Q1_FCST,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE), '-06-30') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS CURR_YR_Q2_FCST,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE), '-09-30') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS CURR_YR_Q3_FCST,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE), '-12-31') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS CURR_YR_Q4_FCST,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+1, '-03-31') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR1_Q1,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+1, '-06-30') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR1_Q2,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+1, '-09-30') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR1_Q3,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+1, '-12-31') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR1_Q4,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+2, '-03-31') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR2_Q1,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+2, '-06-30') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR2_Q2,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+2, '-09-30') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR2_Q3,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+2, '-12-31') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR2_Q4,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+3, '-03-31') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR3_Q1,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+3, '-06-30') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR3_Q2,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+3, '-09-30') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR3_Q3,
+        CASE WHEN QTR_DATES = CONCAT(YEAR('{{ ODATE }}'::DATE)+3, '-12-31') AND UPPER(VERSION) = '{{ VAR("V_FORECAST") }}' THEN VALUE_NR END AS FCST_YR3_Q4
+    FROM PNC_BS
+),
+GRP_QTR_VALUES AS (
+    SELECT
+        FIN_ACCT_NM, FIN_CMPY_NM, FIN_PROD_NM, FIN_LOC_NM, FIN_COST_CENTR_NM, FIN_PLAN_ELEM_NM,
+        FIN_INS_PLAN_NM, FIN_BUS_TYPE_NM, FIN_AFFL_NM, FIN_BUS_TENR_NM, FIN_LOC_DESC, FIN_CMPY_DESC,
+        IGL_PROD_NM, IGL_CMPY_NM, IGL_TOB_NM, IGL_CLASS_ID,
+        ZEROIFNULL(MAX(PREV_YR_Q1)) AS PREV_YR_Q1,
+        ZEROIFNULL(MAX(PREV_YR_Q2)) AS PREV_YR_Q2,
+        ZEROIFNULL(MAX(PREV_YR_Q3)) AS PREV_YR_Q3,
+        ZEROIFNULL(MAX(PREV_YR_Q4)) AS PREV_YR_Q4,
+        ZEROIFNULL(MAX(CURR_YR_Q1_ACT)) AS CURR_YR_Q1_ACT,
+        ZEROIFNULL(MAX(CURR_YR_Q2_ACT)) AS CURR_YR_Q2_ACT,
+        ZEROIFNULL(MAX(CURR_YR_Q3_ACT)) AS CURR_YR_Q3_ACT,
+        ZEROIFNULL(MAX(CURR_YR_Q4_ACT)) AS CURR_YR_Q4_ACT,
+        ZEROIFNULL(MAX(CURR_YR_Q1_FCST)) AS CURR_YR_Q1_FCST,
+        ZEROIFNULL(MAX(CURR_YR_Q2_FCST)) AS CURR_YR_Q2_FCST,
+        ZEROIFNULL(MAX(CURR_YR_Q3_FCST)) AS CURR_YR_Q3_FCST,
+        ZEROIFNULL(MAX(CURR_YR_Q4_FCST)) AS CURR_YR_Q4_FCST,
+        ZEROIFNULL(MAX(FCST_YR1_Q1)) AS FCST_YR1_Q1,
+        ZEROIFNULL(MAX(FCST_YR1_Q2)) AS FCST_YR1_Q2,
+        ZEROIFNULL(MAX(FCST_YR1_Q3)) AS FCST_YR1_Q3,
+        ZEROIFNULL(MAX(FCST_YR1_Q4)) AS FCST_YR1_Q4,
+        ZEROIFNULL(MAX(FCST_YR2_Q1)) AS FCST_YR2_Q1,
+        ZEROIFNULL(MAX(FCST_YR2_Q2)) AS FCST_YR2_Q2,
+        ZEROIFNULL(MAX(FCST_YR2_Q3)) AS FCST_YR2_Q3,
+        ZEROIFNULL(MAX(FCST_YR2_Q4)) AS FCST_YR2_Q4,
+        ZEROIFNULL(MAX(FCST_YR3_Q1)) AS FCST_YR3_Q1,
+        ZEROIFNULL(MAX(FCST_YR3_Q2)) AS FCST_YR3_Q2,
+        ZEROIFNULL(MAX(FCST_YR3_Q3)) AS FCST_YR3_Q3,
+        ZEROIFNULL(MAX(FCST_YR3_Q4)) AS FCST_YR3_Q4
+    FROM QTR_VALUES
+    GROUP BY 
+        FIN_ACCT_NM, FIN_CMPY_NM, FIN_PROD_NM, FIN_LOC_NM, FIN_COST_CENTR_NM, FIN_PLAN_ELEM_NM,
+        FIN_INS_PLAN_NM, FIN_BUS_TYPE_NM, FIN_AFFL_NM, FIN_BUS_TENR_NM, FIN_LOC_DESC, FIN_CMPY_DESC,
+        IGL_PROD_NM, IGL_CMPY_NM, IGL_TOB_NM, IGL_CLASS_ID
+),
 TRN_QTR_AMT AS (
     SELECT 
         FIN_ACCT_NM, FIN_CMPY_NM, FIN_PROD_NM, FIN_LOC_NM, FIN_COST_CENTR_NM, 
